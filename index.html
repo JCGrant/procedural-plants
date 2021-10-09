@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Growth</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      #canvas {
+        display: block; /* remove scrollbar */
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="canvas"></canvas>
+    <script>
+      const scale = 10;
+      const width = Math.floor(window.innerWidth / scale);
+      const height = Math.floor(window.innerHeight / scale);
+
+      const canvas = document.getElementById("canvas");
+      canvas.width = width * scale;
+      canvas.height = height * scale;
+      const ctx = canvas.getContext("2d");
+
+      const lerp = (a, b, t) => a * (1 - t) + b * t;
+
+      const drawSquare = (x, y, color) => {
+        ctx.fillStyle = "#" + color;
+        ctx.fillRect(x * scale, y * scale, scale, scale);
+      };
+
+      const outOfBounds = (x, y) => {
+        return x < 0 || x >= width || y < 0 || y >= height;
+      };
+
+      const pixels = Array.from({ length: height }).map(() =>
+        Array.from({ length: width }).map(() => 0)
+      );
+
+      const cachedLeafLocations = [];
+      const cachedLeafLocationsSet = new Set();
+
+      const setPixel = (x, y, value) => {
+        if (outOfBounds(x, y)) {
+          return;
+        }
+        pixels[y][x] = value;
+        const setValue = y * width + x;
+        if (!cachedLeafLocationsSet.has(setValue)) {
+          cachedLeafLocations.push({ x, y });
+          cachedLeafLocationsSet.add(setValue);
+        }
+      };
+
+      const getPixel = (x, y) => {
+        if (outOfBounds(x, y)) {
+          return 0;
+        }
+        return pixels[y][x];
+      };
+
+      const getRandomPixelWithValue = () => {
+        const index = Math.floor(Math.random() * cachedLeafLocations.length);
+        return cachedLeafLocations[index];
+      };
+
+      const getNumNeighbours = (x, y) => {
+        let numNeighbours = 0;
+        for (let dx = -1; dx <= 1; dx++) {
+          for (let dy = -1; dy <= 1; dy++) {
+            const px = x + dx;
+            const py = y + dy;
+            if (getPixel(px, py) > 0 || outOfBounds(px, py)) {
+              numNeighbours++;
+            }
+          }
+        }
+        return numNeighbours;
+      };
+
+      const pixelColors = [
+        // Background
+        "ffffff",
+
+        // Leaves/Stems
+        "F1FFBB",
+        "CBFC95",
+        "A4F96F",
+        "57F323",
+        "3AC01A",
+        "1C8D11",
+        "0E6019",
+        "074A1D",
+        "003320",
+
+        // Branches
+        "E9BA81",
+        "D38F5A",
+        "BD6433",
+        "994F28",
+        "753A1C",
+        "512511",
+        "2D0F05",
+      ];
+
+      const maxPixelColor = pixelColors.length - 1;
+
+      const render = () => {
+        cachedLeafLocations.forEach(({ x, y }) => {
+          const pixel = getPixel(x, y);
+          if (pixel === 0) {
+            return;
+          }
+          const color = pixelColors[pixel];
+          drawSquare(x, y, color);
+        });
+      };
+
+      const getNextPixel = (x, y) => {
+        const nextX =
+          Math.random() > 0.5 ? (Math.random() > 0.5 ? x + 1 : x - 1) : x;
+        const nextY = nextX === x ? (Math.random() > 0.5 ? y + 1 : y - 1) : y;
+        return { x: nextX, y: nextY };
+      };
+
+      const update = () => {
+        for (let i = 0; i < 1000; i++) {
+          const { x, y } = getRandomPixelWithValue();
+          const pixel = getPixel(x, y);
+          const numNeighbours = getNumNeighbours(x, y);
+
+          // Grow outwards
+          if (pixel > 1 && numNeighbours <= 5) {
+            const { x: nextX, y: nextY } = getNextPixel(x, y);
+            const nextPixel = getPixel(nextX, nextY);
+            setPixel(nextX, nextY, 1);
+          }
+
+          const increaseThreshold = lerp(0.99, 1, pixel / pixelColors.length);
+          // Increase colour
+          if (pixel < maxPixelColor && Math.random() > increaseThreshold) {
+            setPixel(x, y, pixel + 1);
+          }
+        }
+      };
+
+      const run = () => {
+        update();
+        render();
+        requestAnimationFrame(run);
+      };
+
+      // corners
+      // setPixel(1, height - 1, 1);
+      // setPixel(width - 2, height - 1, 1);
+
+      // middle
+      // setPixel(Math.floor(width / 2), Math.floor(height / 2), 1);
+
+      // circle
+      for (let t = 0; t < 2 * Math.PI; t += 0.01) {
+        const x = Math.floor(width / 2 + Math.cos(t) * 30);
+        const y = Math.floor(height / 2 + Math.sin(t) * 30);
+        setPixel(x, y, 11);
+      }
+
+      run();
+    </script>
+  </body>
+</html>
